@@ -1,0 +1,19 @@
+{
+  "name": "tag2bookmark",
+  "version": "1.0.0",
+  "description": "Convert ${placeholder} text into Word bookmarks. Generic tool.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "tag2bookmark": "cli/tag2bookmark.cjs"
+  },
+  "scripts": {
+    "build:web": "python3 scripts/build.py",
+    "build:dist": "bash scripts/build_dist.sh",
+    "test": "node scripts/selftest.cjs"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.8.10",
+    "jszip": "^3.10.1"
+  }
+}

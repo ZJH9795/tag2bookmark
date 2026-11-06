@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标签转书签 · 网页版</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --card: #ffffff; --line: #e4e9f0;
+    --ink: #1f2d3d; --ink2: #6b7a90; --blue: #2563eb; --blue2: #dbeafe;
+    --ok: #059669; --okbg: #ecfdf5; --bad: #dc2626; --badbg: #fef2f2;
+    --warn: #b45309; --warnbg: #fffbeb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink); min-height: 100vh; padding: 32px 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  header { margin-bottom: 20px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  h1 .badge { font-size: 12px; font-weight: 500; color: var(--blue); background: var(--blue2);
+    border-radius: 999px; padding: 3px 10px; vertical-align: 3px; margin-left: 10px; }
+  .sub { color: var(--ink2); font-size: 13px; margin-top: 6px; line-height: 1.7; }
+  .sub b { color: var(--ok); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; }
+  #drop {
+    border: 2px dashed #c3cfdd; border-radius: 10px; padding: 34px 20px; text-align: center;
+    color: var(--ink2); cursor: pointer; transition: all .15s; font-size: 14px; line-height: 1.8;
+  }
+  #drop.on { border-color: var(--blue); background: #f0f6ff; }
+  #drop .big { font-size: 15px; color: var(--ink); }
+  .opts { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: 14px; user-select: none; cursor: pointer; }
+  .chk input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
+  .btns { margin-top: 16px; display: flex; gap: 10px; }
+  button {
+    border: none; border-radius: 8px; padding: 9px 22px; font-size: 14px; cursor: pointer;
+    background: var(--blue); color: #fff; transition: opacity .15s;
+  }
+  button:hover { opacity: .88; }
+  button:disabled { background: #a5c0ec; cursor: not-allowed; }
+  button.ghost { background: #eef2f7; color: var(--ink); }
+  button.sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .filelist { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .fileitem { font-size: 13px; color: var(--ink2); display: flex; gap: 8px; align-items: center; }
+  .fileitem .name { color: var(--ink); }
+  .fileitem .x { cursor: pointer; color: #b0b9c6; padding: 0 4px; }
+  .fileitem .x:hover { color: var(--bad); }
+  .statline { display: flex; gap: 22px; font-size: 13px; color: var(--ink2); margin-bottom: 10px; }
+  .statline b { color: var(--ink); }
+  .result { margin-top: 10px; }
+  .rcase { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .rhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fafbfd;
+    border-bottom: 1px solid var(--line); font-size: 14px; }
+  .rhead .fname { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { font-size: 12px; border-radius: 999px; padding: 2px 10px; }
+  .tag.ok { color: var(--ok); background: var(--okbg); }
+  .tag.bad { color: var(--bad); background: var(--badbg); }
+  .tag.warn { color: var(--warn); background: var(--warnbg); }
+  .tag.plain { color: var(--ink2); background: #f1f4f8; }
+  .rbody { padding: 12px 14px; font-size: 13px; }
+  .count { display: inline-flex; gap: 16px; color: var(--ink2); font-size: 12.5px; margin-right: auto; }
+  .count b { color: var(--ink); }
+  table.log { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  table.log th, table.log td { border-bottom: 1px solid #eef1f5; padding: 5px 8px; text-align: left;
+    font-size: 12.5px; word-break: break-all; }
+  table.log th { color: var(--ink2); font-weight: 500; background: #fafbfd; }
+  table.log td.act { white-space: nowrap; }
+  .a-uniq { color: var(--blue); } .a-book { color: var(--ok); } .a-del { color: var(--ink2); }
+  .errmsg { color: var(--bad); font-size: 13px; line-height: 1.7; }
+  .warnbox { background: var(--warnbg); border-radius: 8px; padding: 8px 12px; margin: 2px 0 8px;
+    color: var(--warn); font-size: 12.5px; line-height: 1.7; }
+  .foot { text-align: center; color: #9aa8ba; font-size: 12px; margin-top: 24px; line-height: 1.8; }
+  details summary { cursor: pointer; font-size: 12.5px; color: var(--ink2); user-select: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>标签转书签 <span class="badge">网页版</span></h1>
+    <div class="sub">
+      把 Word 范本里的 <b>\$\{占位符\}</b> 转换成书签，口径与「标签转书签自动化」宏一致：
+      唯一化 → 转书签（占位符起始处）→ 删除标签。<b>全程本地处理，文件不上传任何服务器。</b>
+    </div>
+  </header>
+
+  <div class="card">
+    <div id="drop">
+      <div class="big">拖拽文件到此处，或点击选择</div>
+      <div>支持 .docx / .docm / .dotx / .dotm / .doc（97-2003，自动转为 docx 输出；可多选）<br>
+      .doc 模式保留字体/字号/加粗斜体/对齐/缩进/行距/页面设置/表格结构与列宽；图片、项目编号样式不保留（重要范本建议另存为 .docx 后处理）；带打开密码的文件请先解锁</div>
+      <input type="file" id="fileInput" multiple accept=".docx,.docm,.dotx,.dotm,.doc" style="display:none">
+    </div>
+    <div class="filelist" id="fileList"></div>
+
+    <div class="opts">
+      <label class="chk"><input type="checkbox" id="opUnique" checked> 唯一化占位符（重复→_1、_2）</label>
+      <label class="chk"><input type="checkbox" id="opBookmarks" checked> 转书签（起始处）</label>
+      <label class="chk"><input type="checkbox" id="opDelete" checked> 删除标签文本</label>
+    </div>
+    <div class="btns">
+      <button id="btnRun" disabled>开始处理</button>
+      <button class="ghost" id="btnClear" disabled>清空</button>
+      <button class="ghost" id="btnZip" disabled hidden>打包下载全部</button>
+    </div>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="foot">
+    正文、页眉、页脚全覆盖（含文本框） · 全程本地处理，不上传任何服务器<br>
+    书签名规则：保留中文/字母/数字/下划线，数字开头加 B_，超 40 字符截断
+  </div>
+</div>
+
+<script>/*__JSZIP_SRC__*/</script>
+<script>/*__DOC_READER_SRC__*/</script>
+<script>/*__CORE_SRC__*/</script>
+<script>
+(function () {
+  var files = [];           // {file, bytes}
+  var outputs = [];         // {name, outName, bytes}
+  var drop = document.getElementById('drop');
+  var input = document.getElementById('fileInput');
+  var fileListEl = document.getElementById('fileList');
+  var btnRun = document.getElementById('btnRun');
+  var btnClear = document.getElementById('btnClear');
+  var btnZip = document.getElementById('btnZip');
+  var resultEl = document.getElementById('result');
+
+  function refreshButtons() {
+    btnRun.disabled = files.length === 0;
+    btnClear.disabled = files.length === 0;
+  }
+  function renderFileList() {
+    fileListEl.innerHTML = '';
+    for (var i = 0; i < files.length; i++) {
+      (function (idx) {
+        var d = document.createElement('div');
+        d.className = 'fileitem';
+        d.innerHTML = '📄 <span class="name"></span> <span class="x" title="移除">✕</span>';
+        d.querySelector('.name').textContent = files[idx].file.name;
+        d.querySelector('.x').onclick = function () { files.splice(idx, 1); renderFileList(); refreshButtons(); };
+        fileListEl.appendChild(d);
+      })(i);
+    }
+    refreshButtons();
+  }
+  function addFiles(fl) {
+    for (var i = 0; i < fl.length; i++) files.push({ file: fl[i], bytes: null });
+    renderFileList();
+  }
+  drop.addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', function () { addFiles(input.files); input.value = ''; });
+  drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('on'); });
+  drop.addEventListener('dragleave', function () { drop.classList.remove('on'); });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault(); drop.classList.remove('on');
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+
+  function getOptions() {
+    return {
+      unique: document.getElementById('opUnique').checked,
+      bookmarks: document.getElementById('opBookmarks').checked,
+      deleteTags: document.getElementById('opDelete').checked
+    };
+  }
+  btnClear.onclick = function () { files = []; outputs = []; renderFileList(); resultEl.innerHTML = ''; btnZip.hidden = true; btnZip.disabled = true; };
+
+  btnRun.onclick = async function () {
+    btnRun.disabled = true; btnRun.textContent = '处理中…';
+    resultEl.innerHTML = '<div class="card">⏳ 正在处理，请稍候…</div>';
+    try {
+      var entries = [];
+      for (var i = 0; i < files.length; i++) {
+        var buf = await files[i].file.arrayBuffer();
+        entries.push({ name: files[i].file.name, bytes: new Uint8Array(buf) });
+      }
+      var results = await convertFiles(entries, getOptions());
+      outputs = [];
+      resultEl.innerHTML = '';
+      for (var r = 0; r < results.length; r++) renderResult(results[r]);
+      if (outputs.length > 1) { btnZip.hidden = false; btnZip.disabled = false; }
+      else { btnZip.hidden = true; btnZip.disabled = true; }
+    } catch (e) {
+      resultEl.innerHTML = '<div class="card"><div class="errmsg">处理失败：' + esc(String(e && e.message || e)) + '</div></div>';
+    }
+    btnRun.textContent = '开始处理';
+    refreshButtons();
+  };
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function renderResult(res) {
+    var box = document.createElement('div');
+    box.className = 'rcase';
+    var head = document.createElement('div'); head.className = 'rhead';
+    if (res.ok) {
+      var s = res.report.summary;
+      var headTag = '<span class="tag ok">成功</span>';
+      head.innerHTML = headTag + '<span class="fname">' + esc(res.name) + '</span>' +
+        '<span class="count">占位符 <b>' + res.report.placeholderTotal + '</b>｜唯一化 <b>' + s['唯一化'] + '</b>｜书签 <b>' + s['书签'] + '</b>｜删除 <b>' + s['删除'] + '</b></span>';
+      var dl = document.createElement('button'); dl.className = 'sm ghost'; dl.textContent = '下载';
+      dl.onclick = function () { downloadBlob(res.outName, res.outB64); };
+      head.appendChild(dl);
+      outputs.push({ name: res.name, outName: res.outName, outB64: res.outB64 });
+
+      var body = document.createElement('div'); body.className = 'rbody';
+      var warnArr = (res.report && res.report.docWarnings) ? res.report.docWarnings : [];
+      var logs = res.report.logs || [];
+      if (warnArr.length) {
+        var wb = document.createElement('div'); wb.className = 'warnbox';
+        for (var w = 0; w < warnArr.length; w++) {
+          var wd2 = document.createElement('div'); wd2.textContent = '⚠ ' + warnArr[w];
+          wb.appendChild(wd2);
+        }
+        body.appendChild(wb);
+      }
+      var t = document.createElement('details');
+      var sum = document.createElement('summary');
+      sum.textContent = '处理明细（' + logs.length + ' 条）';
+      t.appendChild(sum);
+      var tbl = document.createElement('table'); tbl.className = 'log';
+      var html = '<tr><th style="width:130px">区域</th><th style="width:70px">动作</th><th>明细</th></tr>';
+      for (var i = 0; i < logs.length; i++) {
+        var cls = logs[i].action === '书签' ? 'a-book' : (logs[i].action === '唯一化' ? 'a-uniq' : 'a-del');
+        html += '<tr><td>' + esc(logs[i].part) + '</td><td class="act ' + cls + '">' + logs[i].action + '</td><td>' + esc(logs[i].detail) + '</td></tr>';
+      }
+      tbl.innerHTML = html;
+      t.appendChild(tbl);
+      body.appendChild(t);
+      box.appendChild(head); box.appendChild(body);
+    } else {
+      var kindName = { 'legacy-or-encrypted': '格式不支持', 'unknown-format': '格式未知', 'process-error': '处理出错' }[res.errorKind] || '失败';
+      head.innerHTML = '<span class="tag bad">' + kindName + '</span><span class="fname">' + esc(res.name) + '</span>';
+      var body2 = document.createElement('div'); body2.className = 'rbody';
+      body2.innerHTML = '<div class="errmsg">' + esc(res.message || '') + '</div>';
+      box.appendChild(head); box.appendChild(body2);
+    }
+    resultEl.appendChild(box);
+  }
+
+  function b64ToUint8(b64) {
+    var bin = atob(b64); var u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+  function downloadBlob(name, b64) {
+    var blob = new Blob([b64ToUint8(b64)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    saveBlob(name, blob);
+  }
+  function saveBlob(name, blob) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  }
+  btnZip.onclick = async function () {
+    if (!outputs.length) { btnZip.hidden = true; btnZip.disabled = true; return; }
+    btnZip.disabled = true; btnZip.textContent = '打包中…';
+    try {
+      var z = new JSZip();
+      for (var i = 0; i < outputs.length; i++) z.file(outputs[i].outName, b64ToUint8(outputs[i].outB64));
+      var blob = await z.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      var d = new Date();
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      saveBlob('标签转书签输出_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.zip', blob);
+    } finally {
+      btnZip.disabled = false; btnZip.textContent = '打包下载全部';
+    }
+  };
+
+  // 供自动化测试调用
+  window.__T = { convertFiles: convertFiles, b64ToUint8: b64ToUint8 };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.4'
+      - name: Install deps
+        run: npm install
+      - name: Build darwin arm64
+        run: bun build cli/tag2bookmark.cjs --compile --target=bun-darwin-arm64 --outfile tag2bookmark-darwin-arm64
+      - name: Build darwin x64
+        run: bun build cli/tag2bookmark.cjs --compile --target=bun-darwin-x64 --outfile tag2bookmark-darwin-x64
+      - name: Ad-hoc sign
+        run: |
+          codesign --force --sign - tag2bookmark-darwin-arm64 || true
+          codesign --force --sign - tag2bookmark-darwin-x64 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tag2bookmark-macos
+          path: |
+            tag2bookmark-darwin-arm64
+            tag2bookmark-darwin-x64
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.4'
+      - name: Install deps
+        run: npm install
+      - name: Build windows x64
+        run: bun build cli/tag2bookmark.cjs --compile --target=bun-windows-x64 --outfile tag2bookmark-windows-x64.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tag2bookmark-windows
+          path: tag2bookmark-windows-x64.exe

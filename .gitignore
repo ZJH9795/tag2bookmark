@@ -1,0 +1,15 @@
+# 依赖与构建产物
+node_modules/
+dist/
+out/
+*.zip
+
+# 内部测试素材（真实业务文档绝不入库）
+fixtures/real_*.doc
+fixtures/real_*
+**/out/
+
+# 本地缓存
+.DS_Store
+Thumbs.db
+samples/generated/*_已转书签*
